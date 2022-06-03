@@ -6,6 +6,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
@@ -27,11 +28,11 @@ public class Drop extends ApplicationAdapter {
 	private SpriteBatch batch;
 	private Rectangle bucket;
 	private Vector3 touchPos;
-	private Array<Rectangle> raindrops;
+	private Array<WaterDrop> raindrops;
 	private long lastDropTime;
-	static final Rectangle screenSize = new Rectangle(0,0,800,400);
+	static final Rectangle screenSize = new Rectangle(0,0,800f,400f);
 	static final int moveSpeed = 200;
-	static final Rectangle imageSize = new Rectangle(0,0,64,64);
+	static final Rectangle imageSize = new Rectangle(0,0,64f,64f);
 
 	@Override
 	public void create () {
@@ -60,12 +61,14 @@ public class Drop extends ApplicationAdapter {
 
 		touchPos = new Vector3();
 
-		raindrops = new Array<Rectangle>();
+		raindrops = new Array<WaterDrop>();
 		spawnRaindrop();
 	}
 
 	@Override
 	public void render () {
+		float deltaTime = Gdx.graphics.getDeltaTime();
+		//System.out.print(1/deltaTime);
 
 		if(Gdx.input.isTouched()) {
 			//Vector3 touchPos = new Vector3();
@@ -91,13 +94,13 @@ public class Drop extends ApplicationAdapter {
 			spawnRaindrop();
 		}
 
-		for (Iterator<Rectangle> iter = raindrops.iterator(); iter.hasNext();){
-			Rectangle raindrop = iter.next();
-			raindrop.y -= moveSpeed * Gdx.graphics.getDeltaTime();
+		for (Iterator<WaterDrop> iter = raindrops.iterator(); iter.hasNext();){
+			WaterDrop raindrop = iter.next();
+			raindrop.update(deltaTime);
 			if(raindrop.y + imageSize.width < 0){
 				iter.remove();
 			}
-			else if (raindrop.overlaps(bucket)){
+			else if (raindrop.collision.overlaps(bucket)){
 				dropSound.play();
 				iter.remove();
 			}
@@ -106,8 +109,8 @@ public class Drop extends ApplicationAdapter {
 		ScreenUtils.clear(0, 0, .2f, 1);
 		batch.begin();
 		batch.draw(bucketImage, bucket.x, bucket.y );
-		for(Rectangle raindrop: raindrops){
-			batch.draw(dropImage, raindrop.x, raindrop.y);
+		for(WaterDrop raindrop: raindrops){
+			batch.draw(dropImage, raindrop.x, raindrop.y, raindrop.size, raindrop.size);
 		}
 		batch.end();
 	}
@@ -122,12 +125,15 @@ public class Drop extends ApplicationAdapter {
 	}
 
 	private void spawnRaindrop(){
-		Rectangle raindrop = new Rectangle();
-		raindrop.x = MathUtils.random(0, screenSize.width- imageSize.width);
-		raindrop.y = screenSize.height;
-		raindrop.width = imageSize.width;
-		raindrop.height = imageSize.height;
+		WaterDrop raindrop = new WaterDrop( MathUtils.random(0, screenSize.width- imageSize.width),
+											  screenSize.height + 64,
+						                      imageSize.width,
+				moveSpeed,
+				1f
+				);
+
 		raindrops.add(raindrop);
 		lastDropTime = TimeUtils.nanoTime();
+
 	}
 }
